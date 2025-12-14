@@ -100,6 +100,8 @@ class EmailTemplate(models.Model):
         WELCOME = 'WELCOME', 'E-mail de bienvenue'
         PASSWORD_RESET = 'PASSWORD_RESET', 'Réinitialisation de mot de passe'
         EMAIL_VERIFICATION = 'EMAIL_VERIFICATION', 'Vérification d\'e-mail'
+        DOCUMENT_REVOKED = 'DOCUMENT_REVOKED', 'Document révoqué'
+        KEY_EXPIRING = 'KEY_EXPIRING', 'Clé expirant bientôt'
 
     class Language(models.TextChoices):
         FRENCH = 'fr', 'Français'
