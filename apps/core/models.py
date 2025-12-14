@@ -89,3 +89,38 @@ class AuditLog(models.Model):
 
     def __str__(self):
         return f"{self.action_type} by {self.user} at {self.timestamp}"
+
+
+class EmailTemplate(models.Model):
+    """
+    Modèle pour stocker les templates d'email multilingues.
+    Permet de gérer facilement les sujets et corps des emails en version texte et HTML.
+    """
+    class TemplateType(models.TextChoices):
+        WELCOME = 'WELCOME', 'E-mail de bienvenue'
+        PASSWORD_RESET = 'PASSWORD_RESET', 'Réinitialisation de mot de passe'
+        EMAIL_VERIFICATION = 'EMAIL_VERIFICATION', 'Vérification d\'e-mail'
+
+    class Language(models.TextChoices):
+        FRENCH = 'fr', 'Français'
+        ENGLISH = 'en', 'English'
+
+    id = models.UUIDField(primary_key=True, default=uuid.uuid4, editable=False)
+    name = models.CharField(max_length=100, unique=True, help_text="Nom interne unique pour le template (ex: 'welcome_email_fr')")
+    template_type = models.CharField(max_length=50, choices=TemplateType.choices, help_text="Type de template utilisé pour le déclenchement.")
+    subject = models.CharField(max_length=255, help_text="Sujet de l'e-mail.")
+    body_text = models.TextField(blank=True, help_text="Corps de l'e-mail en format texte brut.")
+    body_html = models.TextField(help_text="Corps de l'e-mail en format HTML.")
+    language = models.CharField(max_length=5, choices=Language.choices, default=Language.FRENCH)
+    active = models.BooleanField(default=True, help_text="Désactiver pour ne plus utiliser ce template.")
+
+    class Meta:
+        db_table = 'core_email_templates'
+        unique_together = ('template_type', 'language')
+        ordering = ['name']
+        indexes = [
+            models.Index(fields=['template_type', 'language']),
+        ]
+
+    def __str__(self):
+        return f"{self.get_template_type_display()} ({self.get_language_display()})"
