@@ -85,17 +85,17 @@ class EmailService:
         )
 
     @classmethod
-    def send_welcome_email(cls, user_email: str, username: str, institution_name: str):
+    def send_welcome_email(cls, user_email: str, recipient_name: str, institution_name: str):
         """
         Envoie l'e-mail de bienvenue à un utilisateur d'une institution.
 
         Args:
             user_email (str): L'email de l'utilisateur.
-            username (str): Le nom de l'utilisateur.
+            recipient_name (str): Le nom du destinataire.
             institution_name (str): Le nom de l'institution.
         """
         context = {
-            'username': username,
+            'recipient_name': recipient_name,
             'institution_name': institution_name,
         }
         cls._send_templated_email(

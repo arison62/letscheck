@@ -2,10 +2,22 @@ import logging
 import uuid
 from typing import Optional
 
+from django.http import HttpRequest
 from apps.core.models import AuditLog, User
 
 # Configure a logger for the service
 logger = logging.getLogger(__name__)
+
+
+def get_client_ip(request: HttpRequest) -> str:
+    """Get client IP from request."""
+    x_forwarded_for = request.META.get('HTTP_X_FORWARDED_FOR')
+    if x_forwarded_for:
+        ip = x_forwarded_for.split(',')[0]
+    else:
+        ip = request.META.get('REMOTE_ADDR')
+    return ip
+
 
 class AuditService:
     """
@@ -14,16 +26,17 @@ class AuditService:
     """
 
     @classmethod
-    def log_login(cls, user: User, ip_address: str, success: bool, user_agent: Optional[str] = None):
+    def log_login(cls, user: User, request: HttpRequest, success: bool):
         """
         Enregistre une tentative de connexion.
 
         Args:
             user (User): L'utilisateur qui tente de se connecter.
-            ip_address (str): L'adresse IP de la requête.
+            request (HttpRequest): The Django request object.
             success (bool): True si la connexion a réussi, False sinon.
-            user_agent (Optional[str]): L'user-agent du client.
         """
+        ip_address = get_client_ip(request)
+        user_agent = request.META.get('HTTP_USER_AGENT', '')
         try:
             AuditLog.objects.create(
                 user=user,
@@ -31,7 +44,7 @@ class AuditService:
                 resource_type=AuditLog.ResourceType.USER,
                 resource_id=user.id,
                 ip_address=ip_address,
-                user_agent=user_agent or '',
+                user_agent=user_agent,
                 success=success,
                 details={'username': user.username}
             )
@@ -39,7 +52,7 @@ class AuditService:
             logger.error(f"Failed to log login event for user {user.username}: {e}")
 
     @classmethod
-    def log_document_sign(cls, user: User, document_id: uuid.UUID, original_filename: str, ip_address: str, user_agent: Optional[str] = None):
+    def log_document_sign(cls, user: User, document_id: uuid.UUID, original_filename: str, request: HttpRequest):
         """
         Enregistre la signature d'un document.
 
@@ -47,9 +60,10 @@ class AuditService:
             user (User): L'utilisateur qui a signé le document.
             document_id (uuid.UUID): L'ID du document signé.
             original_filename (str): Le nom original du fichier.
-            ip_address (str): L'adresse IP de la requête.
-            user_agent (Optional[str]): L'user-agent du client.
+            request (HttpRequest): The Django request object.
         """
+        ip_address = get_client_ip(request)
+        user_agent = request.META.get('HTTP_USER_AGENT', '')
         try:
             AuditLog.objects.create(
                 user=user,
@@ -57,7 +71,7 @@ class AuditService:
                 resource_type=AuditLog.ResourceType.DOCUMENT,
                 resource_id=document_id,
                 ip_address=ip_address,
-                user_agent=user_agent or '',
+                user_agent=user_agent,
                 success=True,
                 details={'document_id': str(document_id), 'filename': original_filename}
             )
@@ -65,17 +79,18 @@ class AuditService:
             logger.error(f"Failed to log document sign event for document {document_id}: {e}")
 
     @classmethod
-    def log_document_verify(cls, document_hash: str, ip_address: str, result: str, user_agent: Optional[str] = None, document_id: Optional[uuid.UUID] = None):
+    def log_document_verify(cls, document_hash: str, result: str, request: HttpRequest, document_id: Optional[uuid.UUID] = None):
         """
         Enregistre une tentative de vérification de document.
 
         Args:
             document_hash (str): Le hash du document vérifié.
-            ip_address (str): L'adresse IP du vérificateur.
             result (str): Le résultat de la vérification (ex: 'AUTHENTIC').
-            user_agent (Optional[str]): L'user-agent du client.
+            request (HttpRequest): The Django request object.
             document_id (Optional[uuid.UUID]): L'ID du document si trouvé.
         """
+        ip_address = get_client_ip(request)
+        user_agent = request.META.get('HTTP_USER_AGENT', '')
         success = result == 'AUTHENTIC'
         try:
             AuditLog.objects.create(
@@ -84,7 +99,7 @@ class AuditService:
                 resource_type=AuditLog.ResourceType.DOCUMENT,
                 resource_id=document_id,
                 ip_address=ip_address,
-                user_agent=user_agent or '',
+                user_agent=user_agent,
                 success=success,
                 details={'document_hash': document_hash, 'result': result}
             )
@@ -92,7 +107,7 @@ class AuditService:
             logger.error(f"Failed to log document verify event for hash {document_hash}: {e}")
 
     @classmethod
-    def log_key_created(cls, user: User, key_id: uuid.UUID, key_fingerprint: str, key_algorithm: str, ip_address: str, user_agent: Optional[str] = None):
+    def log_key_created(cls, user: User, key_id: uuid.UUID, key_fingerprint: str, key_algorithm: str, request: HttpRequest):
         """
         Enregistre la création d'une nouvelle clé cryptographique.
 
@@ -101,9 +116,10 @@ class AuditService:
             key_id (uuid.UUID): L'ID de la clé cryptographique.
             key_fingerprint (str): L'empreinte de la clé.
             key_algorithm (str): L'algorithme de la clé.
-            ip_address (str): L'adresse IP de la requête.
-            user_agent (Optional[str]): L'user-agent du client.
+            request (HttpRequest): The Django request object.
         """
+        ip_address = get_client_ip(request)
+        user_agent = request.META.get('HTTP_USER_AGENT', '')
         try:
             AuditLog.objects.create(
                 user=user,
@@ -111,7 +127,7 @@ class AuditService:
                 resource_type=AuditLog.ResourceType.KEY,
                 resource_id=key_id,
                 ip_address=ip_address,
-                user_agent=user_agent or '',
+                user_agent=user_agent,
                 success=True,
                 details={'key_fingerprint': key_fingerprint, 'algorithm': key_algorithm}
             )
@@ -119,7 +135,7 @@ class AuditService:
             logger.error(f"Failed to log key created event for key {key_id}: {e}")
 
     @classmethod
-    def log_institution_validated(cls, admin_user: User, institution_id: uuid.UUID, institution_name: str, ip_address: str, user_agent: Optional[str] = None):
+    def log_institution_validated(cls, admin_user: User, institution_id: uuid.UUID, institution_name: str, request: HttpRequest):
         """
         Enregistre la validation d'une institution par un administrateur.
 
@@ -127,9 +143,10 @@ class AuditService:
             admin_user (User): L'administrateur qui a validé l'institution.
             institution_id (uuid.UUID): L'ID de l'institution validée.
             institution_name (str): Le nom de l'institution.
-            ip_address (str): L'adresse IP de la requête.
-            user_agent (Optional[str]): L'user-agent du client.
+            request (HttpRequest): The Django request object.
         """
+        ip_address = get_client_ip(request)
+        user_agent = request.META.get('HTTP_USER_AGENT', '')
         try:
             AuditLog.objects.create(
                 user=admin_user,
@@ -137,9 +154,38 @@ class AuditService:
                 resource_type=AuditLog.ResourceType.INSTITUTION,
                 resource_id=institution_id,
                 ip_address=ip_address,
-                user_agent=user_agent or '',
+                user_agent=user_agent,
                 success=True,
                 details={'institution_name': institution_name, 'validated_by': admin_user.username}
             )
         except Exception as e:
             logger.error(f"Failed to log institution validated event for institution {institution_id}: {e}")
+
+
+    @classmethod
+    def log_institution_suspended(cls, admin_user: User, institution_id: uuid.UUID, institution_name: str, reason: str, request: HttpRequest):
+        """
+        Enregistre la suspension d'une institution par un administrateur.
+
+        Args:
+            admin_user (User): L'administrateur qui a suspendu l'institution.
+            institution_id (uuid.UUID): L'ID de l'institution suspendue.
+            institution_name (str): Le nom de l'institution.
+            reason (str): La raison de la suspension.
+            request (HttpRequest): The Django request object.
+        """
+        ip_address = get_client_ip(request)
+        user_agent = request.META.get('HTTP_USER_AGENT', '')
+        try:
+            AuditLog.objects.create(
+                user=admin_user,
+                action_type=AuditLog.ActionType.INSTITUTION_SUSPENDED,
+                resource_type=AuditLog.ResourceType.INSTITUTION,
+                resource_id=institution_id,
+                ip_address=ip_address,
+                user_agent=user_agent,
+                success=True,
+                details={'institution_name': institution_name, 'reason': reason, 'suspended_by': admin_user.username}
+            )
+        except Exception as e:
+            logger.error(f"Failed to log institution suspended event for institution {institution_id}: {e}")

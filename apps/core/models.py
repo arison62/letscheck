@@ -56,9 +56,9 @@ class AuditLog(models.Model):
         KEY_REVOKED = 'KEY_REVOKED', 'Révocation clé'
 
         # Administration
-        INSTITUTION_VALIDATED = 'INST_VALID', 'Institution validée'
-        INSTITUTION_SUSPENDED = 'INST_SUSP', 'Institution suspendue'
-        USER_UPDATED = 'USER_UPD', 'Utilisateur modifié'
+        INSTITUTION_VALIDATED = 'INSTITUTION_VALIDATED', 'Institution validée'
+        INSTITUTION_SUSPENDED = 'INSTITUTION_SUSPENDED', 'Institution suspendue'
+        USER_UPD = 'USER_UPD', 'Utilisateur modifié'
 
     class ResourceType(models.TextChoices):
         USER = 'USER', 'Utilisateur'
@@ -69,7 +69,7 @@ class AuditLog(models.Model):
 
     id = models.UUIDField(primary_key=True, default=uuid.uuid4, editable=False)
     user = models.ForeignKey(User, on_delete=models.SET_NULL, null=True, blank=True)
-    action_type = models.CharField(max_length=20, choices=ActionType.choices)
+    action_type = models.CharField(max_length=50, choices=ActionType.choices)
     resource_type = models.CharField(max_length=20, choices=ResourceType.choices)
     resource_id = models.UUIDField(null=True, blank=True)
     ip_address = models.GenericIPAddressField()
