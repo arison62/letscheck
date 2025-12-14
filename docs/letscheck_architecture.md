@@ -236,56 +236,6 @@ class AuditLog(models.Model):
         return f"{self.action_type} by {self.user} at {self.timestamp}"
 
 
-class EmailTemplate(models.Model):
-    """Templates pour emails automatisés"""
-    
-    class TemplateType(models.TextChoices):
-        VERIFICATION = 'VERIFICATION', 'Vérification email'
-        WELCOME = 'WELCOME', 'Bienvenue'
-        DOCUMENT_VERIFIED = 'DOC_VERIFIED', 'Document vérifié'
-        DOCUMENT_REVOKED = 'DOC_REVOKED', 'Document révoqué'
-        KEY_EXPIRING = 'KEY_EXPIRING', 'Clé expire bientôt'
-        INSTITUTION_VALIDATED = 'INST_VALIDATED', 'Institution validée'
-        SUSPICIOUS_ACTIVITY = 'SUSPICIOUS', 'Activité suspecte'
-    
-    id = models.UUIDField(primary_key=True, default=uuid.uuid4, editable=False)
-    name = models.CharField(max_length=100, unique=True)
-    template_type = models.CharField(max_length=20, choices=TemplateType.choices)
-    subject = models.CharField(max_length=200)
-    body_text = models.TextField()  # Version texte
-    body_html = models.TextField()  # Version HTML
-    language = models.CharField(max_length=5, default='fr')  # fr, en
-    active = models.BooleanField(default=True)
-    created_at = models.DateTimeField(auto_now_add=True)
-    updated_at = models.DateTimeField(auto_now=True)
-    
-    class Meta:
-        db_table = 'core_email_templates'
-
-
-class SessionState(models.Model):
-    """État des sessions pour sécurité renforcée"""
-    
-    id = models.UUIDField(primary_key=True, default=uuid.uuid4, editable=False)
-    user = models.ForeignKey(User, on_delete=models.CASCADE)
-    token = models.CharField(max_length=255, unique=True)
-    ip_address = models.GenericIPAddressField()
-    user_agent = models.TextField()
-    is_active = models.BooleanField(default=True)
-    last_activity = models.DateTimeField(auto_now=True)
-    created_at = models.DateTimeField(auto_now_add=True)
-    expires_at = models.DateTimeField()
-    
-    class Meta:
-        db_table = 'core_session_states'
-        indexes = [
-            models.Index(fields=['token']),
-            models.Index(fields=['user', 'is_active']),
-        ]
-```
-
----
-
 ### 2.2 App: `institutions` (Gestion Institutions)
 
 **Responsabilité**: Entités émettrices, validation, hiérarchie
