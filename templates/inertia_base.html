@@ -1,0 +1,30 @@
+{% extends "base.html" %}
+{% load django_vite %}
+
+{% block extra_css %}
+    <!-- Vite CSS sera injecté automatiquement -->
+{% endblock %}
+
+{% block content %}
+   {% block inertia %} {% endblock %}
+{% endblock %}
+
+{% block extra_js %}
+    <!-- Vite HMR Client (Hot Module Replacement en développement) -->
+    {% vite_hmr_client %}
+    
+    <!-- React Refresh pour HMR -->
+    {% vite_react_refresh %}
+    
+    <!-- Point d'entrée principal de l'application React -->
+    {% vite_asset 'ts/main.tsx' %}
+    
+    <!-- Script d'initialisation Inertia -->
+    <script type="module">
+        // Configuration Inertia côté client
+        window.addEventListener('DOMContentLoaded', () => {
+            // Le code Inertia principal est dans ts/main.tsx
+            console.log('ENSPM Hub - Inertia initialisé');
+        });
+    </script>
+{% endblock %}

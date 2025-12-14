@@ -1,0 +1,297 @@
+{% load static %}
+<!DOCTYPE html>
+<html lang="fr">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <title>{% block title %}{{ site_name }}{% endblock %}</title>
+    <style>
+      /* Reset CSS pour emails */
+      body,
+      table,
+      td,
+      a {
+        -webkit-text-size-adjust: 100%;
+        -ms-text-size-adjust: 100%;
+      }
+      table,
+      td {
+        mso-table-lspace: 0pt;
+        mso-table-rspace: 0pt;
+      }
+      img {
+        -ms-interpolation-mode: bicubic;
+        border: 0;
+        height: auto;
+        line-height: 100%;
+        outline: none;
+        text-decoration: none;
+      }
+      /* Variables de couleur (thème Let's Check) */
+      :root {
+        --background: rgb(247, 250, 253);
+        --foreground: rgb(24, 40, 65);
+        --card: rgb(255, 255, 255);
+        --primary: rgb(28, 113, 193);
+        --primary-foreground: rgb(255, 255, 255);
+        --secondary: rgb(246, 245, 244);
+        --secondary-foreground: rgb(50, 64, 86);
+      }
+      body {
+        margin: 0;
+        padding: 0;
+        background-color: #f7fafd;
+        font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto,
+          "Helvetica Neue", Arial, sans-serif;
+      }
+      .email-container {
+        max-width: 600px;
+        margin: 0 auto;
+        background-color: #ffffff;
+      }
+      .email-header {
+        background: linear-gradient(135deg, #1c71c1 0%, #1557a0 100%);
+        padding: 40px 20px;
+        text-align: center;
+      }
+      .logo-container {
+        background-color: rgba(255, 255, 255, 0.95);
+        display: inline-block;
+        padding: 15px 30px;
+        border-radius: 12px;
+        box-shadow: 0 4px 6px rgba(0, 0, 0, 0.1);
+      }
+      .logo {
+        font-size: 28px;
+        font-weight: bold;
+        color: #1c71c1;
+        text-decoration: none;
+        letter-spacing: -0.5px;
+      }
+      .logo-subtitle {
+        font-size: 12px;
+        color: #324056;
+        margin-top: 5px;
+        letter-spacing: 1px;
+        text-transform: uppercase;
+      }
+      .email-body {
+        padding: 40px 30px;
+        color: #182841;
+        line-height: 1.6;
+      }
+      .greeting {
+        font-size: 20px;
+        font-weight: 600;
+        color: #182841;
+        margin-bottom: 20px;
+      }
+      .content {
+        font-size: 15px;
+        color: #324056;
+        margin-bottom: 25px;
+      }
+      .button {
+        display: inline-block;
+        padding: 14px 32px;
+        background-color: #1c71c1;
+        color: #ffffff !important;
+        text-decoration: none;
+        border-radius: 8px;
+        font-weight: 600;
+        font-size: 15px;
+        margin: 20px 0;
+        transition: background-color 0.3s ease;
+      }
+      .button:hover {
+        background-color: #1557a0;
+      }
+      .info-box {
+        background-color: #f7fafd;
+        border-left: 4px solid #1c71c1;
+        padding: 20px;
+        margin: 25px 0;
+        border-radius: 6px;
+      }
+      .info-box-title {
+        font-weight: 600;
+        color: #182841;
+        margin-bottom: 10px;
+        font-size: 16px;
+      }
+      .info-box-content {
+        color: #324056;
+        font-size: 14px;
+      }
+      .credentials {
+        background-color: #f6f5f4;
+        padding: 20px;
+        border-radius: 8px;
+        margin: 20px 0;
+        font-family: "Courier New", monospace;
+      }
+      .credentials-label {
+        font-size: 12px;
+        color: #324056;
+        text-transform: uppercase;
+        letter-spacing: 0.5px;
+        margin-bottom: 5px;
+      }
+      .credentials-value {
+        font-size: 16px;
+        font-weight: bold;
+        color: #1c71c1;
+        word-break: break-all;
+      }
+      .divider {
+        height: 1px;
+        background-color: #e5e7eb;
+        margin: 30px 0;
+      }
+      .email-footer {
+        background-color: #f6f5f4;
+        padding: 30px;
+        text-align: center;
+        color: #324056;
+        font-size: 13px;
+      }
+      .footer-links {
+        margin: 15px 0;
+      }
+      .footer-link {
+        color: #1c71c1;
+        text-decoration: none;
+        margin: 0 10px;
+      }
+      .footer-link:hover {
+        text-decoration: underline;
+      }
+      .social-links {
+        margin: 20px 0;
+      }
+      .social-link {
+        display: inline-block;
+        width: 36px;
+        height: 36px;
+        margin: 0 8px;
+        background-color: #1c71c1;
+        color: #ffffff;
+        text-decoration: none;
+        border-radius: 50%;
+        line-height: 36px;
+        font-weight: bold;
+      }
+      .copyright {
+        color: #6b7280;
+        font-size: 12px;
+        margin-top: 20px;
+      }
+      /* Responsive */
+      @media only screen and (max-width: 600px) {
+        .email-body {
+          padding: 30px 20px !important;
+        }
+        .greeting {
+          font-size: 18px !important;
+        }
+        .content {
+          font-size: 14px !important;
+        }
+        .button {
+          display: block !important;
+          width: 100% !important;
+          box-sizing: border-box;
+        }
+      }
+    </style>
+  </head>
+  <body>
+    <table
+      role="presentation"
+      cellspacing="0"
+      cellpadding="0"
+      border="0"
+      width="100%"
+    >
+      <tr>
+        <td style="padding: 20px 0">
+          <table
+            class="email-container"
+            role="presentation"
+            cellspacing="0"
+            cellpadding="0"
+            border="0"
+            width="100%"
+          >
+            <!-- Header avec logo -->
+            <tr>
+              <td class="email-header">
+                <div class="logo-container">
+                  <div class="logo">
+                    <img
+                      src="{{ site_url }}{% static 'images/letscheck-logo.png' %}"
+                      alt="Let's Check"
+                      style="height: 52px; vertical-align: middle"
+                    />
+                  </div>
+                  <div class="logo-subtitle">
+                    Système de Vérification d'Authenticité
+                  </div>
+                </div>
+              </td>
+            </tr>
+            <!-- Corps du message -->
+            <tr>
+              <td class="email-body">
+                {% block content %}
+                <!-- Le contenu spécifique de chaque email va ici -->
+                {% endblock %}
+              </td>
+            </tr>
+            <!-- Footer -->
+            <tr>
+              <td class="email-footer">
+                <div class="footer-links">
+                  <a href="{{ site_url }}" class="footer-link">Site web</a>
+                  <a href="{{ site_url }}/about" class="footer-link"
+                    >À propos</a
+                  >
+                  <a href="{{ site_url }}/contact" class="footer-link"
+                    >Contact</a
+                  >
+                  <a href="{{ site_url }}/help" class="footer-link">Aide</a>
+                </div>
+                <div class="social-links">
+                  <a href="#" class="social-link" title="Facebook">f</a>
+                  <a href="#" class="social-link" title="Twitter">𝕏</a>
+                  <a href="#" class="social-link" title="LinkedIn">in</a>
+                </div>
+                <div
+                  class="divider"
+                  style="margin: 20px auto; width: 80%"
+                ></div>
+                <p style="margin: 10px 0">
+                  <strong>Let's Check (L'sC)</strong><br />
+                  Système de Vérification d'Authenticité des Documents<br />
+                  Email:
+                  <a href="mailto:{{ support_email }}" style="color: #1c71c1"
+                    >{{ support_email }}</a
+                  >
+                </p>
+                <p class="copyright">
+                  © {{ current_year }} Let's Check. Tous droits réservés.<br />
+                  Vous recevez cet email car vous avez un compte sur notre
+                  plateforme.
+                </p>
+                <p style="font-size: 11px; color: #9ca3af; margin-top: 15px">
+                  Si vous pensez avoir reçu cet email par erreur, veuillez nous
+                  contacter.
+                </p>
+              </td>
+            </tr>
+          </table>
+        </td>
+      </tr>
+    </table>
+  </body>
+</html>
