@@ -39,8 +39,8 @@ EMAIL_HOST = env.str('EMAIL_HOST', default='smtp.gmail.com') # type: ignore
 EMAIL_PORT = env.int('EMAIL_PORT', default=587) # type: ignore
 EMAIL_USE_TLS = env.bool('EMAIL_USE_TLS', default=True) # type: ignore
 EMAIL_USE_SSL = env.bool('EMAIL_USE_SSL', default=True) # type: ignore
-EMAIL_HOST_USER = env.str('EMAIL_HOST_USER')
-EMAIL_HOST_PASSWORD = env.str('EMAIL_HOST_PASSWORD')
+EMAIL_HOST_USER = env.str('EMAIL_HOST_USER', default='')
+EMAIL_HOST_PASSWORD = env.str('EMAIL_HOST_PASSWORD', default='')
 
 # Configuration des emails
 DEFAULT_FROM_EMAIL = env.str('DEFAULT_FROM_EMAIL', default='noreply@enspmhub.com') # type: ignore
