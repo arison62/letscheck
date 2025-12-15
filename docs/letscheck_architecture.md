@@ -128,7 +128,7 @@ letscheck_project/
 ├── apps/
 │   ├── core/                  # App fondamentale
 │   ├── institutions/          # Gestion institutions
-│   ├── cryptographi/          # Clés et algorithmes
+│   ├── cryptography/          # Clés et algorithmes
 │   ├── documents/             # Documents signés
 │   ├── verifications/         # Vérifications publiques
 │   └── analytics/             # Statistiques

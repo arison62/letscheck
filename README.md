@@ -256,14 +256,6 @@ def render_inertia(request):
     })
 # Le composant React correspondant dans `frontend/ts/pages/Dashboard.tsx` :
 ```
-```python
-
-from django.shortcuts import render
-
-def render_django_template(request):
-    return render(request, 'base.html', {})
-```
-
 Le composant React correspondant dans `frontend/ts/pages/Dashboard.tsx` :
 
 ```tsx
