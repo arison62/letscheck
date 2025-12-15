@@ -93,11 +93,11 @@ def get_report_status(request, report_id: uuid.UUID):
 
 @router.get("/institutions", response=List[PublicInstitutionSchema])
 @paginate(PageNumberPagination, page_size=50)
-def list_institutions(request, status: str = 'ACTIVE', type: str = None, country_code: str = None, search: str = None):
+def list_institutions(request, type: str = None, country_code: str = None, search: str = None):
     """
     Lists active and public institutions with filtering and pagination.
     """
-    qs = Institution.objects.filter(status=status)
+    qs = Institution.objects.filter(status='ACTIVE')
     if type:
         qs = qs.filter(type=type)
     if country_code:

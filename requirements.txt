@@ -25,4 +25,7 @@ sqlparse==0.5.4
 typing-inspection==0.4.2
 typing_extensions==4.15.0
 urllib3==2.5.0
-whitenoise==6.11.0
+whitenoise==6.11.0qrcode==8.2
+reportlab==4.4.6
+django-ninja-jwt==5.3.2
+cryptography==46.0.3
