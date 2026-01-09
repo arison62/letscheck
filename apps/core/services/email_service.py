@@ -1,185 +1,152 @@
-# apps/core/services/email_service.py
 import logging
-from typing import List, Optional, Dict, Any
-from django.core.mail import EmailMultiAlternatives
-from django.template.loader import render_to_string
-from django.conf import settings
-from django.utils.html import strip_tags
-from huey.contrib.djhuey import task
+import uuid
+from typing import Dict, Any
 
-logger = logging.getLogger('app')
+from django.template import Context, Template
+from apps.core.models import EmailTemplate, User
+from apps.core.tasks import send_email_async
+
+logger = logging.getLogger(__name__)
 
 class EmailService:
     """
-    Service générique pour l'envoi d'emails avec templates HTML.
-    Utilise Huey pour l'envoi asynchrone en arrière-plan.
+    Service pour la gestion et l'envoi d'e-mails transactionnels via des templates.
     """
-    
-    @staticmethod
-    def send_email_sync(
-        subject: str,
-        to_emails: List[str],
-        template_name: str,
-        context: Dict[str, Any],
-        from_email: Optional[str] = None,
-        cc_emails: Optional[List[str]] = None,
-        bcc_emails: Optional[List[str]] = None,
-        attachments: Optional[List[tuple]] = None
-    ) -> bool:
+
+    @classmethod
+    def _send_templated_email(
+        cls,
+        to_email: str,
+        template_type: EmailTemplate.TemplateType,
+        language: str,
+        context: Dict[str, Any]
+    ):
         """
-        Envoie un email de manière synchrone.
-        
+        Méthode interne pour récupérer, rendre et envoyer un e-mail à partir d'un template.
+
         Args:
-            subject: Sujet de l'email
-            to_emails: Liste des destinataires
-            template_name: Nom du template HTML (ex: 'emails/welcome.html')
-            context: Contexte à passer au template
-            from_email: Email de l'expéditeur (utilise DEFAULT_FROM_EMAIL si None)
-            cc_emails: Liste des destinataires en copie
-            bcc_emails: Liste des destinataires en copie cachée
-            attachments: Liste de tuples (filename, content, mimetype)
-            
-        Returns:
-            bool: True si l'envoi a réussi, False sinon
+            to_email (str): Adresse e-mail du destinataire.
+            template_type (EmailTemplate.TemplateType): Le type de template à utiliser.
+            language (str): Le code de langue ('fr' ou 'en').
+            context (Dict[str, Any]): Le contexte pour rendre le template.
         """
         try:
-            # Utiliser l'email par défaut si non spécifié
-            from_email = from_email or settings.DEFAULT_FROM_EMAIL
-            # Ajouter les variables globales au contexte
-            context.update({
-                'site_name': getattr(settings, 'SITE_NAME', "Let'sCheck"),
-                'site_url': getattr(settings, 'SITE_URL', 'http://localhost:8000'),
-                'support_email': getattr(settings, 'SUPPORT_EMAIL', 'support@letscheck'),
-                'current_year': __import__('datetime').datetime.now().year,
-            })
-            
-            # Rendre le template HTML
-            html_content = render_to_string(template_name, context)
-            
-            # Générer la version texte brut
-            text_content = strip_tags(html_content)
-            
-            # Créer l'email
-            email = EmailMultiAlternatives(
+            template_obj = EmailTemplate.objects.get(
+                template_type=template_type,
+                language=language,
+                active=True
+            )
+
+            # Rendu du sujet et du corps
+            subject_template = Template(template_obj.subject)
+            body_html_template = Template(template_obj.body_html)
+            body_text_template = Template(template_obj.body_text or '')
+
+            render_context = Context(context)
+
+            subject = subject_template.render(render_context)
+            body_html = body_html_template.render(render_context)
+            body_text = body_text_template.render(render_context)
+
+            # Appel de la tâche asynchrone
+            send_email_async(
+                to_email=to_email,
                 subject=subject,
-                body=text_content,
-                from_email=from_email,
-                to=to_emails,
-                cc=cc_emails or [],
-                bcc=bcc_emails or []
+                body_html=body_html,
+                body_text=body_text
             )
-            
-            # Attacher la version HTML
-            email.attach_alternative(html_content, "text/html")
-            
-            # Ajouter les pièces jointes si présentes
-            if attachments:
-                for filename, content, mimetype in attachments:
-                    email.attach(filename, content, mimetype)
-            
-            # Envoyer l'email
-            email.send(fail_silently=False)
-            
-            logger.info(
-                f"Email envoyé avec succès: '{subject}' à {', '.join(to_emails)}"
-            )
-            return True
-            
+
+        except EmailTemplate.DoesNotExist:
+            logger.error(f"Email template not found for type '{template_type}' and language '{language}'.")
         except Exception as e:
             logger.error(
-                f"Erreur lors de l'envoi de l'email '{subject}' à {', '.join(to_emails)}: {str(e)}",
+                f"Failed to send '{template_type}' email to {to_email}. Error: {e}",
                 exc_info=True
             )
-            return False
-    
-    @staticmethod
-    def send_email_async(
-        subject: str,
-        to_emails: List[str],
-        template_name: str,
-        context: Dict[str, Any],
-        from_email: Optional[str] = None,
-        cc_emails: Optional[List[str]] = None,
-        bcc_emails: Optional[List[str]] = None,
-        attachments: Optional[List[tuple]] = None
-    ):
+
+    @classmethod
+    def send_verification_email(cls, user: User, verification_url: str):
         """
-        Envoie un email de manière asynchrone via Huey.
-        Même signature que send_email_sync.
+        Envoie l'e-mail de vérification du compte.
+
+        Args:
+            user (User): L'utilisateur à qui envoyer l'e-mail.
+            verification_url (str): L'URL pour vérifier le compte.
         """
-        send_email_task.schedule(
-            args=(
-                subject, to_emails, template_name, context, 
-                from_email, cc_emails, bcc_emails, attachments
-            ),
-            delay=0
-        )
-        logger.info(f"Email '{subject}' planifié pour envoi asynchrone à {', '.join(to_emails)}")
-
-
-# ==========================================
-# TÂCHES HUEY (BACKGROUND TASKS)
-# ==========================================
-
-@task(retries=3, retry_delay=60)
-def send_email_task(
-    subject: str,
-    to_emails: List[str],
-    template_name: str,
-    context: Dict[str, Any],
-    from_email: Optional[str] = None,
-    cc_emails: Optional[List[str]] = None,
-    bcc_emails: Optional[List[str]] = None,
-    attachments: Optional[List[tuple]] = None
-):
-    """
-    Tâche Huey pour l'envoi d'email en arrière-plan.
-    Avec 3 tentatives de réessai en cas d'échec (délai de 60s entre chaque tentative).
-    """
-    return EmailService.send_email_sync(
-        subject=subject,
-        to_emails=to_emails,
-        template_name=template_name,
-        context=context,
-        from_email=from_email,
-        cc_emails=cc_emails,
-        bcc_emails=bcc_emails,
-        attachments=attachments
-    )
-
-
-# ==========================================
-# FONCTIONS UTILITAIRES PRÉDÉFINIES
-# ==========================================
-
-class EmailTemplates:
-    """
-    Collection de méthodes pour envoyer des emails prédéfinis.
-    """
-    
-    @staticmethod
-    def send_notification_email(
-        user_email: str, 
-        user_name: str, 
-        notification_title: str,
-        notification_message: str,
-        action_url: Optional[str] = None,
-        action_text: Optional[str] = None
-    ):
-        """Envoie un email de notification générique."""
-        EmailService.send_email_async(
-            subject=notification_title,
-            to_emails=[user_email],
-            template_name='emails/notification.html',
-            context={
-                'user_name': user_name,
-                'notification_title': notification_title,
-                'notification_message': notification_message,
-                'action_url': action_url,
-                'action_text': action_text
-            }
+        context = {
+            'username': user.username,
+            'verification_url': verification_url,
+        }
+        cls._send_templated_email(
+            to_email=user.email,
+            template_type=EmailTemplate.TemplateType.EMAIL_VERIFICATION,
+            language='fr',  # Supposer le français par défaut ou adapter selon le profil utilisateur
+            context=context
         )
 
+    @classmethod
+    def send_welcome_email(cls, user_email: str, recipient_name: str, institution_name: str):
+        """
+        Envoie l'e-mail de bienvenue à un utilisateur d'une institution.
 
-# Instanciation du service
-email_service = EmailService()
+        Args:
+            user_email (str): L'email de l'utilisateur.
+            recipient_name (str): Le nom du destinataire.
+            institution_name (str): Le nom de l'institution.
+        """
+        context = {
+            'recipient_name': recipient_name,
+            'institution_name': institution_name,
+        }
+        cls._send_templated_email(
+            to_email=user_email,
+            template_type=EmailTemplate.TemplateType.WELCOME,
+            language='fr',
+            context=context
+        )
+
+    @classmethod
+    def send_document_revoked_email(cls, user_email: str, username: str, document_name: str, institution_name: str):
+        """
+        Informe un utilisateur que son document a été révoqué.
+
+        Args:
+            user_email (str): L'email de l'utilisateur.
+            username (str): Le nom de l'utilisateur.
+            document_name (str): Le nom ou l'identifiant du document.
+            institution_name (str): Le nom de l'institution.
+        """
+        context = {
+            'username': username,
+            'document_name': document_name,
+            'institution_name': institution_name,
+        }
+        cls._send_templated_email(
+            to_email=user_email,
+            template_type=EmailTemplate.TemplateType.DOCUMENT_REVOKED,
+            language='fr',
+            context=context
+        )
+
+    @classmethod
+    def send_key_expiring_email(cls, user_email: str, username: str, key_fingerprint: str, days_remaining: int):
+        """
+        Alerte un utilisateur que sa clé cryptographique est sur le point d'expirer.
+
+        Args:
+            user_email (str): L'email de l'utilisateur.
+            username (str): Le nom de l'utilisateur.
+            key_fingerprint (str): L'empreinte de la clé.
+            days_remaining (int): Le nombre de jours avant expiration.
+        """
+        context = {
+            'username': username,
+            'key_fingerprint': key_fingerprint,
+            'days_remaining': days_remaining,
+        }
+        cls._send_templated_email(
+            to_email=user_email,
+            template_type=EmailTemplate.TemplateType.KEY_EXPIRING,
+            language='fr',
+            context=context
+        )

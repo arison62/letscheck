@@ -18,10 +18,12 @@ from django.contrib import admin
 from django.urls import path, include
 from debug_toolbar.toolbar import debug_toolbar_urls
 from .api import api_v1
+from apps.core import views as core_views
 
 
 urlpatterns = [
     path('admin/', admin.site.urls),
     path('', include('apps.home.urls')),
     path('api/v1/', api_v1.urls),
+    path('verify-account/<str:token>/', core_views.verify_account, name='verify_account'),
 ] + debug_toolbar_urls()
