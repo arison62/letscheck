@@ -3,6 +3,7 @@ from django.http import Http404, HttpRequest
 from django.conf import settings
 from ninja import NinjaAPI
 from ninja.throttling import AnonRateThrottle, AuthRateThrottle
+from apps.verifications.api import router as verifications_router
 from ninja.errors import ValidationError, HttpError, AuthenticationError, AuthorizationError
 
 import logging
@@ -32,6 +33,8 @@ api_v1 = NinjaAPI(
         AuthRateThrottle('100/s')
     ]
 )
+
+api_v1.add_router("/verifications", verifications_router, tags=["Verifications"])
 
 # Gestionnaires d'exceptions globaux avec schémas pour docs Swagger
 @api_v1.exception_handler(ValidationError)
